@@ -1,8 +1,3 @@
-# ChangingThePicture
-Hofstra, Smeets &amp; Bakker 2022
-
-
-
 # Codebook ‘ChangingThePicture_mastersheet.csv’
 
 ChangingThePicture_mastersheet.csv contains metadata for 58.444 releases, including films, TV series and documentaries. Collection of these films started with the 617 films in the Cornell movie dialogues corpus. The selection was then expanded to include all releases that shared one or more crew members with these 617 films, resulting in a collection of 58.444 releases. For this, we used the publicly available IMDb data files.
