@@ -11,92 +11,93 @@ Please note that the data set has 102.902 rows. This is because every director h
 
 # 
 
-tconst (string)
+*tconst (string)*
 IMDb release ID. Used in IMDb hyperlinks (e.g. https://www.imdb.com/title/tt0103594).
 
-titleType (string)
+*titleType (string)*
 Release type, e.g. movie, tvSeries, short, videogame.
 
-primaryTitle (string)
+*primaryTitle (string)*
 Main title for the film.
 
-releaseYear (integer)
+*releaseYear (integer)*
 Year in which the release came out (according to IMDb).
 
-genres (list)
+*genres (list)*
 Comma-separated list of genres, with a maximum of 3.
 
-nconst_director (string)
+*nconst_director (string)*
 IMDb person ID. This column only contains IDs for movie directors. Used in IMDb hyperlinks (e.g. https://www.imdb.com/name/nm0001008/).
 
-imdbRating (numeric)
+*imdbRating (numeric)*
 Average IMDb score for the film.
 
-meanPreviousIMDbRatingDirector (numeric)
+*meanPreviousIMDbRatingDirector (numeric)*
 Mean of IMDb ratings of previous releases by director.
 
-directorPreviousFilmsCount (integer)
+*directorPreviousFilmsCount (integer)*
 Number of releases by the director released before the current release.
 
-crewCount (integer)
+*crewCount (integer)*
 Amount of crew members, as registered in IMDb. Maximum of 10 per film.
 
-percentageFemaleCrew (numeric)
+*percentageFemaleCrew (numeric)*
 The percentage of female crew members for the film. Expressed by number between 0 and 1.
 
-Rated (string)
+*Rated (string)*
 Only for films in the Cornell data set. US age rating of the film (e.g. R, PG-13).
 
-Writer (string)
+*Writer (string)*
 Only for films in the Cornell data set. Names of the film writers.
 
-Actors (string)
+*Actors (string)*
 Only for films in the Cornell data set. Names of the film actors.
 
-Plot (string)
+*Plot (string)*
 Only for films in the Cornell data set. Synopsis of the film plot.
 
-Language (string)
+*Language (string)*
 Only for films in the Cornell data set. Language of the film.
 
-Country (string)
+*Country (string)*
 Only for films in the Cornell data set. Film’s country of origin.
-Awards (string)
+
+*Awards (string)*
 Only for films in the Cornell data set. Awards and nominations the film won.
 
-Metascore (integer)
+*Metascore (integer)*
 Only for films in the Cornell data set. Metacritic score of the film.
 
-BoxOffice (string)
+*BoxOffice (string)*
 Only for films in the Cornell data set. Box office of the film.
 
-BT.id (string)
+*BT.id (string)*
 Only for films in the Cornell data set. ID for the film in the Bechdel Test data base.
 
-BT.score (integer)
+*BT.score (integer)*
 Only for films in the Cornell data set.  Bechdel Test score of the film, expressed by a number between 0 and 3. As described on the above-mentioned website: “(1) it has to have at least two women in it, who (2) who talk to each other, about (3) something besides a man.”
 
-BT.dubious (logical)
+*BT.dubious (logical)*
 Only for films in the Cornell data set. Whether the Bechdel Test score is contested by the community, meaning the score might be unreliable.
 
-char_percentage_female (numeric)
+*char_percentage_female (numeric)*
 Only for films in the Cornell data set. The percentage of female characters in the film. Expressed by number between 0 and 1.
 
-dir_percentage_female (numeric)
+*dir_percentage_female (numeric)*
 Only for films in the Cornell data set. The percentage of female directors for the film. Expressed by number between 0 and 1.
 
-nr_nodes (integer)
+*nr_nodes (integer)*
 
-nr_edges (integer)
+*nr_edges (integer)*
 
-density (numeric)
+*density (numeric)*
 
-triad_closure (numeric)
+*triad_closure (numeric)*
 
-clustering_coef (numeric)
+*clustering_coef (numeric)*
 
-is_connected (logical)
+*is_connected (logical)*
 
-centralization_degree (numeric)
+*centralization_degree (numeric)*
 
-gender_assortativity (numeric)
+*gender_assortativity (numeric)*
