@@ -1,0 +1,167 @@
+---
+title: "Prior collaboration networks"
+author: "Bas Hofstra"
+date: '2023-27-02'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Staging the script
+
+What we want is a collaboration network that tells us whether the crew in current movies worked together before!
+
+```{r staging, eval = FALSE}
+#staging the script
+rm(list = ls())
+
+# custom function to check for packages / installs
+fpackage.check <- function(packages) {
+  lapply(packages, FUN = function(x) {
+    if (!require(x, character.only = TRUE)) {
+      install.packages(x, dependencies = TRUE)
+      library(x, character.only = TRUE)
+    }
+  })
+}
+
+
+# declare packages
+packages = c("tidyverse", "statnet", "igraph", "reshape2", "readr")
+
+
+# load/ install pacakges
+fpackage.check(packages)
+
+# read the data
+movcre <- read.csv("data/final_results/movies_crew_network.csv", sep = ";")
+
+# tconst == movies
+# nconst == actor
+
+```
+
+## Staging some identifiers we need later on
+
+So we need the number of movies, the number of years, and a vector with movie identifiers.
+
+```{r mangling, eval = FALSE}
+
+# some descriptives
+length(unique(movcre$nconst)) # --> 3197 actors cornell datbase?
+length(unique(movcre$tconst)) # --> that spread out over 50k movies in imdb?
+
+# what we want is in each movie-year combination a network for whether those folks worked together
+
+# let's start with making an object for each year?
+year_vec <- sort(unique(movcre$year))
+
+# then for each movie
+movie_vec <- unique(movcre$tconst)
+
+max(year_vec)-min(year_vec)+1 == length(year_vec) # all years represented 1922-2022
+
+# movie-year identifier
+movie_years <- unique(movcre[, c("tconst", "year")])
+```
+
+## Edgelist of movies
+
+This could probably work better, but this is what I could crunch today. We make a dataframe for each movie in the vector of movie identifiers. We then identify the number of actors involved, which are automatically the dimensions of an adjacency matrix that is filled with ones (i.e., those actors worked together in that movies). We then make that matrix with that as input: we repeat 1 dimensions-squared times (i.e., the number of possible ties in a network). We then melt that matrix into an edgelist of folks working together per movie. We then bind those rows. Seems to have worked. 
+
+```{r edges, eval = FALSE}
+movid_list <- list()
+movie_mat <- list()
+movie_edges <- list()
+dims <- list()
+l <- 0
+for (i in 1:length(movie_vec)) {
+  
+  movid_list[[i]] <- movcre[movcre$tconst == movie_vec[i], ] # so for each year movie?
+
+  l[i] <- length(movid_list[[i]][["nconst"]]) #actors as matrix size
+  dims[[i]] <- movid_list[[i]][["nconst"]] # dimensions is numer of actors
+
+  movie_mat[[i]] <-  matrix(rep(1, l[i]^2), nrow = l[i], ncol = l[i], byrow= TRUE, dimnames = list(dims[[i]], dims[[i]])) # input in matrix
+
+  movie_edges[[i]] <- melt(movie_mat[[i]]) # make edgelist
+  movie_edges[[i]][["tconst"]] <- movie_vec[i] #attach movie to that
+  
+  movie_edges[[i]] <- left_join(movie_edges[[i]], movie_years, by = c("tconst" = "tconst"))
+}
+movie_edges_c <- bind_rows(movie_edges) # long dataset of edges
+
+
+# we wanna attach year back onto it
+movie_years <- unique(movcre[, c("tconst", "year")])
+movie_edges <- left_join(movie_edges, movie_years, by = c("tconst" = "tconst"))
+```
+
+
+## Prior collaborations
+
+So this is where the "magic happens". What we do is basically for each movie we left join (on actor-actor ties) all the possible collaborations in prior or future work. What we then do is throw away the movies that are either in the same or future years. We then only attach a tie to individual actors if they have a tie in the MATCHED data otherwise they don't have a tie. In other words, we can now construct network metrics on the prior collaboration network.
+
+```{r listedgeslist, eval = FALSE}
+#So for each of the 50k movies we want exact matches on whether *prior* ties were available
+priorcollabs <- list()
+for (i in 1:length(movie_vec))) {
+  
+  priorcollabs[[i]] <- left_join(movie_edges[[i]], movie_edges_c, by = c("Var1" = "Var1", "Var2" = "Var2"))
+  
+  priorcollabs[[i]][["value.x"]] <- ifelse(priorcollabs[[i]][["value.y"]] == 1 & 
+                                             priorcollabs[[i]][["year.y"]] < priorcollabs[[i]][["year.x"]], 1, 0)
+  
+  priorcollabs[[i]] <- unique(priorcollabs[[i]][, c("Var1", "Var2", "value.x", "tconst.x")])
+  
+  names(priorcollabs[[i]]) <- c("Var1", "Var2", "value", "tconst")
+  
+}
+```
+
+
+## Network metrics: density and centralization
+
+We can now calculate network metrics. For each edgelist we first create an undirected network. If there are no vertices, we add those (unique crew in a movie), we then set the names of those vertices, and calculate density and centralization. Note that <ANY movies do not actually have any prior collabs.
+
+
+```{r nets, eval = FALSE}
+
+nets <- list()
+densities <- 0
+centrals <- 0
+for (i in seq(priorcollabs)) {
+  
+  nets[[i]] <- graph_from_edgelist(as.matrix(priorcollabs[[i]][priorcollabs[[i]][["value"]] == 1 & 
+                                                                 priorcollabs[[i]][["Var1"]] != priorcollabs[[i]][["Var2"]], c("Var1", "Var2")]), directed = TRUE)
+  
+  nets[[i]] <- add_vertices(nets[[i]], length(unique(priorcollabs[[i]][["Var1"]]))-vcount(nets[[i]]))
+  
+  V(nets[[i]])$name <- unique(priorcollabs[[i]][["Var1"]])             
+  
+  densities[i] <- edge_density(nets[[i]], loops=F)
+  centrals[i] <- centr_degree(nets[[i]], mode="all", normalized=T)$centralization
+}
+collabnets <- data.frame(cbind(movie_vec[1:length(densities)], densities, centrals))
+collabnets$densities[collabnets$densities == "NaN"] <- 0
+collabnets$centrals[collabnets$centrals == "NaN"] <- 0
+names(collabsnets) <- c("tconst", "collabdens", "collabcentr")
+
+write.csv(collabnets, "data/final_results/collabnets.csv", sep = ";")
+```
+
+
+```{r load, include = FALSE, eval = TRUE}
+
+collabnets <- read.csv("data/final_results/collabnets.csv")
+```
+
+```{r descriptives}
+
+plot(density(as.numeric(collabnets$collabdens)))
+plot(density(as.numeric(collabnets$collabcentr)))
+cor(as.numeric(collabnets$collabdens), as.numeric(collabnets$collabcentr)) # not so highly correlated!
+```
+
