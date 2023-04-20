@@ -1,0 +1,169 @@
+---
+title: "Prior collaboration networks"
+author: "Bas Hofstra"
+date: '2023-20-04'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Staging the script
+
+What we want is a collaboration network that tells us whether the crew in current movies worked together before!
+
+```{r staging, eval = TRUE}
+#staging the script
+rm(list = ls())
+
+# custom function to check for packages / installs
+fpackage.check <- function(packages) {
+  lapply(packages, FUN = function(x) {
+    if (!require(x, character.only = TRUE)) {
+      install.packages(x, dependencies = TRUE)
+      library(x, character.only = TRUE)
+    }
+  })
+}
+
+
+# declare packages
+packages = c("tidyverse", "statnet", "igraph", "reshape2", "readr", "dplyr", "stringr", "car")
+
+
+# load/ install pacakges
+fpackage.check(packages)
+
+```
+
+
+
+```{r loading, eval = TRUE}
+
+setwd('..') # somehow WD was one too high?
+# read the data
+df <- read.csv("data/final_results/ChangingThePicture_mastersheet.csv", sep = ";")
+collabs <- read.csv("data/final_results/collabnets.csv", sep = ",")
+
+
+
+df <- left_join(df, collabs[, c("tconst", "collabdens", "collabcentr")], by = c("tconst" = "tconst"))
+# tconst == movies
+# nconst == actor
+
+```
+
+## Staging some identifiers we need later on
+
+So we need the number of movies, the number of years, and a vector with movie identifiers.
+
+```{r varstating, eval = TRUE}
+
+
+df$Metascore[df$Metascore == "N/A"] <- NA
+
+df$BT.score[df$df$BT.score == "N/A"] <- NA
+df$BT.id[df$df$BT.id == "N/A"] <- NA
+df$BT.dubious[df$BT.dubious == "N/A"] <- NA
+df$Awards[df$BT.dubious == "N/A"] <- NA
+df$Metascore[df$Metascore == ""] <- NA
+
+
+# number of wins and nominations in awards
+df$winsnoms <- sapply(str_extract_all(df$Awards, "[[:digit:]]+"),
+  function(x) ifelse(identical(x, character(0)),NA,sum(as.numeric(x))))
+
+
+df <- df[, c("tconst", "Metascore", "imdbRating", "BoxOffice", "winsnoms", 
+             "releaseYear", 
+             "meanPreviousIMDbRatingDirector", 
+             "crewCount", "collabdens", "collabcentr", 
+             "nr_nodes", "density", "centralization_degree",
+             "dir_percentage_female", "percentageFemaleCrew", "char_percentage_female", 
+             "BT.score", "BT.dubious"
+             )]
+
+names(df) <- c("tconst", "metascore", "imdbrating", "boxoffice", "winsnoms", 
+             "year", 
+             "directorrating", 
+             "ncrew", "collabdens", "collabcentr", 
+             "nchars", "chardens", "charcentr", 
+             "pfemale_dir", "pfemale_crew", "pfemale_chars", 
+             "bechdelscore", "bechdeldubious"
+             )
+
+for (i in 2:length(df)) {
+  
+  df[[i]] <- as.numeric(df[[i]])
+  
+}
+
+df$female_dir <- ifelse(df$pfemale_dir != 0, 1, 0)
+df$fullcrew <- ifelse(df$ncrew == 10, 1, 0)
+df$bf2000 <- ifelse(df$year < 2000, 0, 1)
+
+```
+
+
+```{r depstaging, eval = TRUE}
+
+
+ggplot(df, aes(x=metascore)) + geom_density()
+ggplot(df, aes(x=imdbrating)) + geom_density()
+ggplot(df, aes(x=boxoffice)) + geom_density()
+ggplot(df, aes(x=winsnoms)) + geom_density()
+
+df$lboxoffice <- log10(df$boxoffice)
+df$lwinsnoms <- log10(df$winsnoms)
+
+ggplot(df, aes(x=lboxoffice)) + geom_density()
+ggplot(df, aes(x=lwinsnoms)) + geom_density()
+
+```
+
+
+```{r depstaging, eval = TRUE}
+
+
+
+m1 <- lm(metascore ~ bf2000 +
+             ncrew + collabdens + collabcentr +
+             nchars + chardens + charcentr +
+             pfemale_crew + pfemale_chars + bechdelscore
+             , data = df)
+summary(m1)
+vif(m1)
+
+m2 <- lm(imdbrating ~ bf2000 + 
+             ncrew + collabdens + collabcentr +
+             nchars + chardens + charcentr +
+             pfemale_crew + pfemale_chars + bechdelscore
+             , data = df)
+summary(m2)
+vif(m2)
+
+m3 <- lm(lboxoffice ~ bf2000 + 
+             ncrew + collabdens + collabcentr +
+              chardens + charcentr +
+             pfemale_crew + pfemale_chars + bechdelscore
+             , data = df)
+summary(m3)
+vif(m3)
+
+m4 <- lm(lwinsnoms ~ bf2000 + 
+             ncrew + collabdens + collabcentr +
+              chardens + charcentr +
+             pfemale_crew + pfemale_chars + bechdelscore
+             , data = df)
+summary(m4)
+vif(m4)
+
+
+plot(m1$residuals)
+plot(m2$residuals)
+plot(m3$residuals)
+plot(m4$residuals)
+
+
+```
