@@ -29,7 +29,7 @@ fpackage.check <- function(packages) {
 
 
 # declare packages
-packages = c("tidyverse", "statnet", "igraph", "reshape2", "readr", "dplyr", "stringr", "car")
+packages = c("tidyverse", "statnet", "igraph", "reshape2", "readr", "dplyr", "stringr", "car", "dotwhisker")
 
 
 # load/ install pacakges
@@ -58,7 +58,7 @@ df <- left_join(df, collabs[, c("tconst", "collabdens", "collabcentr")], by = c(
 
 So we need the number of movies, the number of years, and a vector with movie identifiers.
 
-```{r varstating, eval = TRUE}
+```{r varstaging, eval = TRUE}
 
 
 df$Metascore[df$Metascore == "N/A"] <- NA
@@ -106,7 +106,7 @@ df$bf2000 <- ifelse(df$year < 2000, 0, 1)
 ```
 
 
-```{r depstaging, eval = TRUE}
+```{r depdistr, eval = TRUE}
 
 
 ggplot(df, aes(x=metascore)) + geom_density()
@@ -132,33 +132,39 @@ m1 <- lm(metascore ~ bf2000 +
              nchars + chardens + charcentr +
              pfemale_crew + pfemale_chars + bechdelscore
              , data = df)
-summary(m1)
-vif(m1)
 
 m2 <- lm(imdbrating ~ bf2000 + 
              ncrew + collabdens + collabcentr +
              nchars + chardens + charcentr +
              pfemale_crew + pfemale_chars + bechdelscore
              , data = df)
-summary(m2)
-vif(m2)
+
 
 m3 <- lm(lboxoffice ~ bf2000 + 
              ncrew + collabdens + collabcentr +
-              chardens + charcentr +
+             nchars + chardens + charcentr +
              pfemale_crew + pfemale_chars + bechdelscore
              , data = df)
-summary(m3)
-vif(m3)
 
 m4 <- lm(lwinsnoms ~ bf2000 + 
              ncrew + collabdens + collabcentr +
-              chardens + charcentr +
+             nchars + chardens + charcentr +
              pfemale_crew + pfemale_chars + bechdelscore
              , data = df)
+summary(m1)
+summary(m2)
+summary(m3)
 summary(m4)
-vif(m4)
 
+dwplot(m1, ci = 0.90)
+dwplot(m2, ci = 0.90)
+dwplot(m3, ci = 0.90)
+dwplot(m4, ci = 0.90)
+
+vif(m1)
+vif(m2)
+vif(m3)
+vif(m4)
 
 plot(m1$residuals)
 plot(m2$residuals)
