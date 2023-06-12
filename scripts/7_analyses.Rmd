@@ -29,7 +29,7 @@ fpackage.check <- function(packages) {
 
 
 # declare packages
-packages = c("tidyverse", "statnet", "igraph", "reshape2", "readr", "dplyr", "stringr", "car", "dotwhisker")
+packages = c("tidyverse", "statnet", "igraph", "reshape2", "readr", "dplyr", "stringr", "car", "dotwhisker", "cowplot")
 
 
 # load/ install pacakges
@@ -45,10 +45,12 @@ setwd('..') # somehow WD was one too high?
 # read the data
 df <- read.csv("data/final_results/ChangingThePicture_mastersheet.csv", sep = ";")
 collabs <- read.csv("data/final_results/collabnets.csv", sep = ",")
+#collabs2 <- read.csv("data/final_results/collabnets2.csv", sep = ",")
 
 
 
 df <- left_join(df, collabs[, c("tconst", "collabdens", "collabcentr")], by = c("tconst" = "tconst"))
+
 # tconst == movies
 # nconst == actor
 
@@ -102,23 +104,24 @@ for (i in 2:length(df)) {
 df$female_dir <- ifelse(df$pfemale_dir != 0, 1, 0)
 df$fullcrew <- ifelse(df$ncrew == 10, 1, 0)
 df$bf2000 <- ifelse(df$year < 2000, 0, 1)
-
+df$bechdelscore <- ifelse(df$bechdelscore != 3, 0, 1)
 ```
 
 
 ```{r depdistr, eval = TRUE}
+df$metascore <- df$metascore/10
+meta <- ggplot(df, aes(x=metascore)) + geom_density() + theme_minimal() + xlab("Metascore") + ylab("Density")
+imdb <- ggplot(df, aes(x=imdbrating)) + geom_density() + theme_minimal() + xlab("IMDb rating") + ylab("Density")
+ggplot(df, aes(x=boxoffice)) + geom_density() + theme_minimal()
+ggplot(df, aes(x=winsnoms)) + geom_density() + theme_minimal()
 
 
-ggplot(df, aes(x=metascore)) + geom_density()
-ggplot(df, aes(x=imdbrating)) + geom_density()
-ggplot(df, aes(x=boxoffice)) + geom_density()
-ggplot(df, aes(x=winsnoms)) + geom_density()
-
-df$lboxoffice <- log10(df$boxoffice)
 df$lwinsnoms <- log10(df$winsnoms)
 
-ggplot(df, aes(x=lboxoffice)) + geom_density()
-ggplot(df, aes(x=lwinsnoms)) + geom_density()
+box <- ggplot(df, aes(x=lboxoffice)) + geom_density() + theme_minimal() + xlab("log(Box office $)") + ylab("Density")
+wins <- ggplot(df, aes(x=lwinsnoms)) + geom_density() + theme_minimal() + xlab("log(Wins and nominations)") + ylab("Density")
+
+plot_grid(meta, imdb, box, wins, nrow = 2, labels = c("A","B", "C", "D"))
 
 ```
 
@@ -127,49 +130,172 @@ ggplot(df, aes(x=lwinsnoms)) + geom_density()
 
 
 
-m1 <- lm(metascore ~ bf2000 +
+m1a <- lm(metascore ~ bf2000 +
+             ncrew + collabdens + collabcentr +
+             pfemale_crew 
+             , data = df)
+
+m1b <- lm(metascore ~ bf2000 +
+             ncrew + collabdens + collabcentr +
+             nchars + chardens + charcentr +
+             pfemale_crew + pfemale_chars + bechdelscore 
+             , data = df)
+
+m2a <- lm(imdbrating ~ bf2000 +
+             ncrew + collabdens + collabcentr +
+             pfemale_crew 
+             , data = df)
+
+m2b <- lm(imdbrating ~ bf2000 +
+             ncrew + collabdens + collabcentr +
+             nchars + chardens + charcentr +
+             pfemale_crew + pfemale_chars + bechdelscore 
+             , data = df)
+
+m3a <- lm(lboxoffice ~ bf2000 +
+             ncrew + collabdens + collabcentr +
+             pfemale_crew 
+             , data = df)
+
+m3b <- lm(lboxoffice ~ bf2000 +
              ncrew + collabdens + collabcentr +
              nchars + chardens + charcentr +
              pfemale_crew + pfemale_chars + bechdelscore
              , data = df)
 
-m2 <- lm(imdbrating ~ bf2000 + 
+m4a <- lm(lwinsnoms ~ bf2000 +
+             ncrew + collabdens + collabcentr +
+             pfemale_crew 
+             , data = df)
+
+m4b <- lm(lwinsnoms ~ bf2000 +
              ncrew + collabdens + collabcentr +
              nchars + chardens + charcentr +
              pfemale_crew + pfemale_chars + bechdelscore
              , data = df)
 
+summary(m1a)
+summary(m1b)
+summary(m2a)
+summary(m2b)
+summary(m3a)
+summary(m3b)
+summary(m4a)
+summary(m4b)
 
-m3 <- lm(lboxoffice ~ bf2000 + 
-             ncrew + collabdens + collabcentr +
-             nchars + chardens + charcentr +
-             pfemale_crew + pfemale_chars + bechdelscore
-             , data = df)
 
-m4 <- lm(lwinsnoms ~ bf2000 + 
-             ncrew + collabdens + collabcentr +
-             nchars + chardens + charcentr +
-             pfemale_crew + pfemale_chars + bechdelscore
-             , data = df)
-summary(m1)
-summary(m2)
-summary(m3)
-summary(m4)
+f1 <- dwplot(list(m1a, m1b), ci = 0.95) %>%
+        relabel_predictors(c(
+                bf2000 = "After 2000",
+                ncrew = "# crew",
+                collabdens = "Collaboration density",
+                collabcentr = "Collaboration centralization",
+                pfemale_crew = "% women crew",
+                chardens = "Character density",
+                charcentr = "Character centralization",
+                nchars = "# characters",
+                pfemale_chars = "% women chararacters",
+                bechdelscore = "Bechdel score")) + 
+  theme_minimal() +
+    scale_color_hue(breaks = c("Model 2", "Model 1"), labels = c('Production + Narrative', 'Production')) +
+  theme(legend.title = element_blank(),
+        legend.position = "top",
+        legend.text = element_text(size=5),
+        axis.text.y = element_text(size=5),
+        plot.title = element_text(size = 8)) + ggtitle("Metascore")
+       
 
-dwplot(m1, ci = 0.90)
-dwplot(m2, ci = 0.90)
-dwplot(m3, ci = 0.90)
-dwplot(m4, ci = 0.90)
 
-vif(m1)
-vif(m2)
-vif(m3)
-vif(m4)
+f2 <- dwplot(list(m2a, m2b), ci = 0.95) %>%
+        relabel_predictors(c(
+                bf2000 = "a",
+                ncrew = "b",
+                collabdens = "c",
+                collabcentr = "d",
+                pfemale_crew = "e",
+                chardens = "f",
+                charcentr = "g",
+                nchars = "h",
+                pfemale_chars = "i",
+                bechdelscore = "j")) + 
+  theme_minimal() +
+    scale_color_hue(breaks = c("Model 2", "Model 1"), labels = c('Production + Narrative', 'Production')) +
+  theme(legend.title = element_blank(),
+        legend.text = element_text(size=5),
+        legend.position = "top",
+        axis.text.y = element_text(color="white", size = 5),
+        plot.title = element_text(size = 8)) + ggtitle("IMDb rating") 
+       
+f3 <- dwplot(list(m3a, m3b), ci = 0.95) %>%
+        relabel_predictors(c(
+                bf2000 = "After 2000",
+                ncrew = "# crew",
+                collabdens = "Collaboration density",
+                collabcentr = "Collaboration centralization",
+                pfemale_crew = "% women crew",
+                chardens = "Character density",
+                charcentr = "Character centralization",
+                nchars = "# characters",
+                pfemale_chars = "% women chararacters",
+                bechdelscore = "Bechdel score")) + 
+  theme_minimal() +
+    scale_color_hue(breaks = c("Model 2", "Model 1"), labels = c('Production + Narrative', 'Production')) +
+  theme(legend.title = element_blank(),
+        legend.text = element_text(size=5),
+        axis.text.y = element_text(size=5),
+        legend.position = "top",
+        plot.title = element_text(size = 8)) + ggtitle("log(Box office $)")
+       
+f4 <- dwplot(list(m4a, m4b), ci = 0.95) %>%
+        relabel_predictors(c(
+                bf2000 = "a",
+                ncrew = "b",
+                collabdens = "c",
+                collabcentr = "d",
+                pfemale_crew = "e",
+                chardens = "f",
+                charcentr = "g",
+                nchars = "h",
+                pfemale_chars = "i",
+                bechdelscore = "j")) +
+  theme_minimal() +
+    scale_color_hue(breaks = c("Model 2", "Model 1"), labels = c('Production + Narrative', 'Production')) +
+  theme(legend.title = element_blank(),
+        legend.text = element_text(size=5),
+        legend.position = "top",
+        axis.text.y = element_text(color="white", size = 5),
+        plot.title = element_text(size = 8))+ ggtitle("log(Wins and nominations)")
+fig2 <- plot_grid(f1, f2, f3, f4, nrow = 2, labels = c("A", "B", "C", "D"), rel_widths = c(0.55, 0.45))
 
-plot(m1$residuals)
-plot(m2$residuals)
-plot(m3$residuals)
-plot(m4$residuals)
+# save
+ggsave("results_fig2.pdf", plot = fig2, device = "pdf",
+       scale = 1, width = 7, height = 5, units = c("in"),
+       dpi = "retina")
+
+
+dwplot(m2b, ci = 0.95) + theme_minimal()
+dwplot(m3a, ci = 0.95) + theme_minimal()
+dwplot(m3b, ci = 0.95) + theme_minimal()
+dwplot(m4a, ci = 0.95) + theme_minimal()
+dwplot(m4b, ci = 0.95) + theme_minimal()
+
+vif(m1a)
+vif(m1b)
+vif(m2a)
+vif(m2b)
+vif(m3a)
+vif(m3b)
+vif(m4a)
+vif(m4b)
+
+plot(m1a$residuals)
+plot(m1b$residuals)
+plot(m2a$residuals)
+plot(m2b$residuals)
+plot(m3a$residuals)
+plot(m3b$residuals)
+plot(m4a$residuals)
+plot(m4b$residuals)
 
 
 ```

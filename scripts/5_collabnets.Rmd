@@ -36,7 +36,9 @@ packages = c("tidyverse", "statnet", "igraph", "reshape2", "readr")
 fpackage.check(packages)
 
 # read the data
+setwd("/Users/u351132/repos/ChangingThePicture/")
 movcre <- read.csv("data/final_results/movies_crew_network.csv", sep = ";")
+
 
 # tconst == movies
 # nconst == actor
@@ -50,7 +52,7 @@ So we need the number of movies, the number of years, and a vector with movie id
 ```{r mangling, eval = FALSE}
 
 # some descriptives
-length(unique(movcre$nconst)) # --> 3197 actors cornell datbase?
+length(unique(movcre$nconst)) # --> 3197 crew cornell datbase?
 length(unique(movcre$tconst)) # --> that spread out over 50k movies in imdb?
 
 # what we want is in each movie-year combination a network for whether those folks worked together
@@ -77,7 +79,7 @@ movie_mat <- list()
 movie_edges <- list()
 dims <- list()
 l <- 0
-for (i in 1:length(movie_vec)) {
+for (i in 40246:length(movie_vec)) {
   
   movid_list[[i]] <- movcre[movcre$tconst == movie_vec[i], ] # so for each year movie?
 
@@ -107,7 +109,7 @@ So this is where the "magic happens". What we do is basically for each movie we 
 ```{r listedgeslist, eval = FALSE}
 #So for each of the 50k movies we want exact matches on whether *prior* ties were available
 priorcollabs <- list()
-for (i in 1:length(movie_vec))) {
+for (i in 19626:length(movie_vec)) {
   
   priorcollabs[[i]] <- left_join(movie_edges[[i]], movie_edges_c, by = c("Var1" = "Var1", "Var2" = "Var2"))
   
@@ -147,9 +149,12 @@ for (i in seq(priorcollabs)) {
 collabnets <- data.frame(cbind(movie_vec[1:length(densities)], densities, centrals))
 collabnets$densities[collabnets$densities == "NaN"] <- 0
 collabnets$centrals[collabnets$centrals == "NaN"] <- 0
-names(collabsnets) <- c("tconst", "collabdens", "collabcentr")
+names(collabnets) <- c("tconst", "collabdens", "collabcentr")
+```
 
-write.csv(collabnets, "data/final_results/collabnets.csv", sep = ";")
+```{r nets, eval = FALSE}
+setwd("/Users/u351132/repos/ChangingThePicture/")
+write.csv(collabnets, "data/final_results/collabnets2.csv", sep = ";")
 ```
 
 
